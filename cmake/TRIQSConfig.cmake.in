@@ -257,9 +257,13 @@ macro (triqs_build_f2py_module target_name modulename module_pyf_name filelist1)
  ENDFOREACH(f)
  # write the script that will build the f2py extension
  SET(filename ${CMAKE_CURRENT_BINARY_DIR}/${filename} )
+ SET(lapacklibs "")
+ FOREACH(l ${TRIQS_LIBRARY_LAPACK})
+  SET(lapacklibs "${lapacklibs} ${l}")
+ ENDFOREACH(l)
  FILE(WRITE ${filename} "import sys\n")
  FILE(APPEND ${filename} "from numpy.f2py import main\n")
- FILE(APPEND ${filename} "sys.argv = [''] +'-c --f77exec=${CMAKE_Fortran_COMPILER} --f90exec=${CMAKE_Fortran_COMPILER} -m ${modulename} ${modulename}.pyf ${filelist} -llapack'.split()\n")
+ FILE(APPEND ${filename} "sys.argv = [''] +'-c --f77exec=${CMAKE_Fortran_COMPILER} --f90exec=${CMAKE_Fortran_COMPILER} -m ${modulename} ${modulename}.pyf ${filelist} ${lapacklibs}'.split()\n")
  FILE(APPEND ${filename} "main()\n")
 
  # We had the normal target of the module
