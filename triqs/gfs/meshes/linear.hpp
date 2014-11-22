@@ -23,6 +23,9 @@
 namespace triqs {
 namespace gfs {
 
+ // mesh_point forward declaration
+ template<typename MeshType> struct mesh_point;
+
  /**
   * Linear mesh
   */ 
