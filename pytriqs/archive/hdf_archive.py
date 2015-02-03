@@ -91,7 +91,7 @@ class HDFArchiveGroup (HDFArchiveGroupBasicLayer) :
         if key in self.ignored_keys : 
             raise KeyError, "key %s is reserved"%key
         if self.key_as_string_only : # for bacward compatibility
-            if type(key) not in [ type('') , type(u'a')] : 
+            if type(key) not in [ type('') , type(u'a'), numpy.string_]:
                 raise KeyError, "Key must be string only !"
             return key
         r = repr(key)
