@@ -21,6 +21,7 @@
 #include <iostream>
 #include <sstream>
 #include "gtest/gtest.h"
+#include <triqs/mpi/base.hpp>
 
 // print a vector ?
 //template <typename T> 
@@ -31,6 +32,7 @@
 
 #define MAKE_MAIN \
  int main(int argc, char **argv) {\
+  triqs::mpi::environment env(argc, argv);\
   ::testing::InitGoogleTest(&argc, argv);\
   return RUN_ALL_TESTS();\
 }
@@ -38,6 +40,10 @@
 // Arrays are equal 
 template<typename X, typename Y>
 ::testing::AssertionResult array_are_equal(X const &x, Y const &y) {
+ if (x.domain() != y.domain()) 
+ return ::testing::AssertionFailure() << "Comparing two arrays of different size "
+          << "\n X = "<<  x << "\n Y = "<< y;
+
  if (max_element(abs(x - y)) ==0)
   return ::testing::AssertionSuccess();
  else
@@ -45,16 +51,22 @@ template<typename X, typename Y>
 }
 
 #define EXPECT_EQ_ARRAY(X, Y) EXPECT_TRUE(array_are_equal(X,Y));
+#define EXPECT_ARRAY_EQ(X, Y) EXPECT_TRUE(array_are_equal(X,Y));
 
 // Arrays are close 
 template<typename X, typename Y>
 ::testing::AssertionResult array_are_close(X const &x, Y const &y) {
  double precision = 1.e-10;
+ if (x.domain() != y.domain()) 
+ return ::testing::AssertionFailure() << "Comparing two arrays of different size "
+          << "\n X = "<<  x << "\n Y = "<< y;
+
  if (max_element(abs(x - y)) < precision)
   return ::testing::AssertionSuccess();
  else
   return ::testing::AssertionFailure() << "max_element(abs(x-y)) = " << max_element(abs(x - y)) << "\n X = "<<  x << "\n Y = "<< y;
 }
 
-#define EXPECT_CLOSE_ARRAY(X, Y) EXPECT_TRUE(array_are_close(X,Y));
+#define EXPECT_CLOSE_ARRAY(X, Y) EXPECT_TRUE(array_are_close(X,Y))
+#define EXPECT_ARRAY_NEAR(X, Y) EXPECT_TRUE(array_are_close(X,Y))
 
