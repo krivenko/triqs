@@ -110,14 +110,12 @@ namespace gfs {
   using interpol_data_t = index_t;
  
   interpol_data_t get_interpolation_data(default_interpol_policy, k_t const &k) const {
-   std::cout  << " indices "<< locate_neighbours(k) << std::endl;
    return locate_neighbours(k);
   }
 
   template<typename F>
   auto evaluate(default_interpol_policy, F const & f, lattice::k_t const &k) const {
    auto id = get_interpolation_data(default_interpol_policy{}, k);
-   std::cout  << " indices "<< id << std::endl;
    return f[id];
   }
 

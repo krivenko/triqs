@@ -41,18 +41,13 @@ namespace gfs {
   using type = tail;
  };
 
-  namespace gfs_implementation {
+ namespace gfs_implementation {
 
   // h5 name
   template <typename Singularity> struct h5_name<refreq, matrix_valued, Singularity> {
    static std::string invoke() { return "ReFreq"; }
   };
-
-  /// ---------------------------  data access  ---------------------------------
-  template <> struct data_proxy<refreq, matrix_valued> : data_proxy_array<std::complex<double>, 3> {};
-  template <> struct data_proxy<refreq, scalar_valued> : data_proxy_array<std::complex<double>, 1> {};
  }
-
- }
+}
 }
 

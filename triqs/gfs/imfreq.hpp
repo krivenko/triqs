@@ -27,8 +27,6 @@
 namespace triqs {
 namespace gfs {
 
- using dcomplex= std::complex<double>;
-
  // singularity
  template <> struct gf_default_singularity<imfreq, matrix_valued> {
   using type = tail;
@@ -40,15 +38,10 @@ namespace gfs {
  namespace gfs_implementation {
 
   /// ---------------------------  hdf5 ---------------------------------
-  
+ 
   template <typename S> struct h5_name<imfreq, matrix_valued, S> {
    static std::string invoke() { return "ImFreq"; }
   };
-
-  /// ---------------------------  data access  ---------------------------------
-
-  template <> struct data_proxy<imfreq, matrix_valued> : data_proxy_array<dcomplex, 3> {};
-  template <> struct data_proxy<imfreq, scalar_valued> : data_proxy_array<dcomplex, 1> {};
 
   /// ---------------------------  evaluator ---------------------------------
 
@@ -69,26 +62,26 @@ namespace gfs {
    }
 
    // evaluator
-   template <typename G> rv_t operator()(G const *g, matsubara_freq const &f) const {
-    if (g->mesh().positive_only()) { // only positive Matsubara frequencies
-     if ((f.n >= 0) && (f.n < g->mesh().size())) return (*g)[f.n];
-     int sh = (g->mesh().domain().statistic == Fermion ? 1 : 0);
-     if ((f.n < 0) && ((-f.n - sh) < g->mesh().size())) return r_t{conj((*g)[-f.n - sh])};
+   template <typename G> rv_t operator()(G const &g, matsubara_freq const &f) const {
+    if (g.mesh().positive_only()) { // only positive Matsubara frequencies
+     if ((f.n >= 0) && (f.n < g.mesh().size())) return g[f.n];
+     int sh = (g.mesh().domain().statistic == Fermion ? 1 : 0);
+     if ((f.n < 0) && ((-f.n - sh) < g.mesh().size())) return r_t{conj(g[-f.n - sh])};
     } else {
-     if ((f.n >= g->mesh().first_index()) && (f.n < g->mesh().size() + g->mesh().first_index())) return (*g)[f.n];
+     if ((f.n >= g.mesh().first_index()) && (f.n < g.mesh().size() + g.mesh().first_index())) return g[f.n];
     }
-    return _evaluate_sing(Target{}, g->singularity(), f);
+    return _evaluate_sing(Target{}, g.singularity(), f);
    }
 
-  // int -> replace by matsubara_freq
-  template <typename G>
-  AUTO_DECL operator()(G const *g, int n) const
-      RETURN((*g)(matsubara_freq(n, g->mesh().domain().beta, g->mesh().domain().statistic)));
+   // int -> replace by matsubara_freq
+   template <typename G>
+   AUTO_DECL operator()(G const &g, int n) const
+       RETURN(g(matsubara_freq(n, g.mesh().domain().beta, g.mesh().domain().statistic)));
 
-  // Evaluate on the tail : compose the tails
-  template <typename G> typename G::singularity_t operator()(G const *g, tail_view t) const {
-   return compose(g->singularity(), t);
-  }
+   // Evaluate on the tail : compose the tails
+   template <typename G> typename G::singularity_t operator()(G const &g, tail_view t) const {
+    return compose(g.singularity(), t);
+   }
   };
 
  } // gfs_implementation

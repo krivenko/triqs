@@ -35,13 +35,13 @@ namespace gfs {
 
  // The default singularity, for each Variable.
  template <typename... Ms> struct gf_default_singularity<cartesian_product<Ms...>, scalar_valued> {
-  using type = tail_zero<scalar_valued>;
+  using type = tail_zero<dcomplex>;
  };
  template <typename... Ms> struct gf_default_singularity<cartesian_product<Ms...>, matrix_valued> {
-  using type = tail_zero<matrix_valued>;
+  using type = tail_zero<matrix<dcomplex>>;
  };
  template <typename... Ms, int R> struct gf_default_singularity<cartesian_product<Ms...>, tensor_valued<R>> {
-  using type = tail_zero<tensor_valued<R>>;
+  using type = tail_zero<array<dcomplex,R>>;
  };
 
  // forward declaration, Cf m_tail
@@ -85,7 +85,6 @@ namespace gfs {
 
   using triqs::make_const_view;
   inline dcomplex make_const_view(dcomplex z) { return z; }
-
  
   // now the multi d evaluator itself.
   template <typename Target, typename Sing, typename... Ms> struct evaluator<cartesian_product<Ms...>, Target, Sing> {
@@ -93,26 +92,26 @@ namespace gfs {
    static constexpr int arity = sizeof...(Ms); // METTRE ARITY DANS LA MESH ! 
    template <typename G> evaluator(G *) {};
 
-   template <typename G, typename... Args> auto operator()(G const *g, Args &&... args) const {
+   template <typename G, typename... Args> auto operator()(G const &g, Args &&... args) const {
     static_assert(sizeof...(Args) == arity, "Wrong number of arguments in gf evaluation");
-    if (g->mesh().is_within_boundary(args...)) 
-     return make_const_view(g->mesh().evaluate(typename G::mesh_t::default_interpol_policy{}, *g, std::forward<Args>(args)...));
+    if (g.mesh().is_within_boundary(args...))
+     return make_const_view(g.mesh().evaluate(typename G::mesh_t::default_interpol_policy{}, g, std::forward<Args>(args)...));
     using rt = std14::decay_t<decltype(
-        make_const_view(g->mesh().evaluate(typename G::mesh_t::default_interpol_policy{}, *g, std::forward<Args>(args)...)))>;
-    return rt{evaluate(g->singularity(), args...)};
+        make_const_view(g.mesh().evaluate(typename G::mesh_t::default_interpol_policy{}, g, std::forward<Args>(args)...)))>;
+    return rt{evaluate(g.singularity(), args...)};
    }
   };
 
   // special case when the tail is nothing
   template <typename Target, typename... Ms> struct evaluator<cartesian_product<Ms...>, Target, nothing> {
 
-   static constexpr int arity = sizeof...(Ms); // METTRE ARITY DANS LA MESH ! 
+   static constexpr int arity = sizeof...(Ms); // METTRE ARITY DANS LA MESH !
    template <typename G> evaluator(G *) {};
 
-   template <typename G, typename... Args> auto operator()(G const *g, Args &&... args) const {
+   template <typename G, typename... Args> auto operator()(G const &g, Args &&... args) const {
     static_assert(sizeof...(Args) == arity, "Wrong number of arguments in gf evaluation");
-    if (!g->mesh().is_within_boundary(args...)) TRIQS_RUNTIME_ERROR<<"Evaluation out of the mesh";
-    return g->mesh().evaluate(typename G::mesh_t::default_interpol_policy{}, *g, std::forward<Args>(args)...);
+    if (!g.mesh().is_within_boundary(args...)) TRIQS_RUNTIME_ERROR << "Evaluation out of the mesh";
+    return g.mesh().evaluate(typename G::mesh_t::default_interpol_policy{}, g, std::forward<Args>(args)...);
    }
   };
 

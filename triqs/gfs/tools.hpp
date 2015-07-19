@@ -28,21 +28,17 @@
 
 namespace triqs {
 namespace gfs {
- namespace mpl = boost::mpl;
 
  namespace tag {
   struct composite {};
   struct mesh_point {};
  }
 
- // scalar_valued, matrix_valued, tensor_valued
- struct scalar_valued {};
-
- template <int R> struct tensor_valued {
-  static_assert(R > 0, "tensor_valued only for rank >0");
+ struct scalar_valued { static constexpr int dim =0;};
+ struct matrix_valued { static constexpr int dim =2;};
+ template <int R> struct tensor_valued {  
+  static constexpr int dim = R; static_assert(R > 0, "tensor_valued only for rank >0"); 
  };
-
- struct matrix_valued {};
 
  //------------------------------------------------------
 

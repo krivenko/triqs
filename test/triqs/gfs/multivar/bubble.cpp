@@ -35,17 +35,14 @@ TEST(Gf, Bubble) {
 
   auto eps_k_ = -2 * (cos(k_(0)) + cos(k_(1)));
   Gk(inu_, k_) << 1 / (inu_ + mu - eps_k_);
-  std::cout  << " ok " <<std::endl;
 
   auto Gmesh = std::get<1>(Gk.mesh());
   chi0q(inu_, iw_, q_) << sum(Gk(inu_, k_) * Gk(inu_ + iw_, k_ + q_), k_ = Gmesh) / Gmesh.size();
-  std::cout  << " ok " <<std::endl;
 
   curry<0>(Gr)[inu_] << inverse_fourier(curry<0>(Gk)[inu_]);
 
   chi0r(inu_, iw_, r_) << Gr(inu_, r_) * Gr(inu_ + iw_, -r_);
 
-  std::cout  << " ok " <<std::endl;
 
   curry<0,1>(chi0q_from_r)(inu_, iw_) << fourier(on_mesh(curry<0,1>(chi0r))(inu_, iw_));
   //curry<0,1>(chi0q_from_r)(inu_, iw_) << fourier(curry<0,1>(chi0r)(inu_, iw_));
@@ -58,7 +55,6 @@ TEST(Gf, Bubble) {
   auto ggr = gr;
   auto ggq = gk;
   auto ggq_from_r = gk;
-  std::cout  << " ok " <<std::endl;
 
   gk(k_) << 1./ (M_PI/beta*1_j - eps_k_);
   ggq(q_) << sum(gk(k_) * gk(k_ + q_), k_=gk.mesh())/gk.mesh().size();

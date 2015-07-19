@@ -46,7 +46,7 @@ namespace gfs {
   static const int value = sizeof...(Ms);
  };
 
- // alias
+ // Used in curry, partial_eval.  
  template <typename... Ms> struct cartesian_product<std::tuple<Ms...>> : cartesian_product<Ms...> {};
 
  /** Cartesian product of meshes */
@@ -240,14 +240,14 @@ namespace gfs {
 
  // -- end of class
 
- template <int pos, typename P> decltype(auto) get_index(P const &p) {return std::get<pos>(p.components_tuple()).index();}
+ /*template <int pos, typename P> decltype(auto) get_index(P const &p) {return std::get<pos>(p.components_tuple()).index();}
 
  template <int pos, typename P> decltype(auto) get_point(P const &p) {
   return std::get<pos>(p.mesh()->components()).index_to_point(std::get<pos>(p.components_tuple()).index());
  }
 
  template <int pos, typename P> decltype(auto) get_component(P const &p) { return std::get<pos>(p.components_tuple()); }
-
+*/
 }
 }
 

@@ -29,8 +29,8 @@ namespace gfs {
  struct retime {};
 
  template <> struct gf_mesh<retime> : segment_mesh {
-  // using segment_mesh::segment_mesh;
-  template <typename... T> gf_mesh(T &&... x) : segment_mesh(std::forward<T>(x)...) {}
+  using segment_mesh::segment_mesh;
+  //template <typename... T> gf_mesh(T &&... x) : segment_mesh(std::forward<T>(x)...) {}
  };
 
  // singularity
@@ -47,10 +47,6 @@ namespace gfs {
   template <typename Singularity> struct h5_name<retime, matrix_valued, Singularity> {
    static std::string invoke() { return "ReTime"; }
   };
-
- /// ---------------------------  data access  ---------------------------------
-  template <> struct data_proxy<retime, matrix_valued> : data_proxy_array<std::complex<double>, 3> {};
-  template <> struct data_proxy<retime, scalar_valued> : data_proxy_array<std::complex<double>, 1> {};
 
  } // gfs_implementation
 }
