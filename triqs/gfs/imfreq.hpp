@@ -27,6 +27,8 @@
 namespace triqs {
 namespace gfs {
 
+ using dcomplex= std::complex<double>;
+
  // singularity
  template <> struct gf_default_singularity<imfreq, matrix_valued> {
   using type = tail;
@@ -45,104 +47,50 @@ namespace gfs {
 
   /// ---------------------------  data access  ---------------------------------
 
-  template <> struct data_proxy<imfreq, matrix_valued> : data_proxy_array<std::complex<double>, 3> {};
-  template <> struct data_proxy<imfreq, scalar_valued> : data_proxy_array<std::complex<double>, 1> {};
+  template <> struct data_proxy<imfreq, matrix_valued> : data_proxy_array<dcomplex, 3> {};
+  template <> struct data_proxy<imfreq, scalar_valued> : data_proxy_array<dcomplex, 1> {};
 
   /// ---------------------------  evaluator ---------------------------------
 
-  // handle the case where the matsu. freq is out of grid...
+  template <typename Target, typename Sing> struct evaluator<imfreq, Target, Sing> {
 
-  struct _eval_imfreq_base_impl {
    static constexpr int arity = 1;
-   template <typename G> int sh(G const * g) const { return (g->mesh().domain().statistic == Fermion ? 1 : 0);}
-
-   // int -> replace by matsubara_freq
-   template <typename G>
-   AUTO_DECL operator()(G const *g, int n) const
-       RETURN((*g)(matsubara_freq(n, g->mesh().domain().beta, g->mesh().domain().statistic)));
-
-   template <typename G> typename G::singularity_t operator()(G const *g, tail_view t) const {
-    return compose(g->singularity(),t);
-    //return g->singularity();
-   }
-  };
-  // --- various 4 specializations
-
-  // scalar_valued, tail
-  template <> struct evaluator<imfreq, scalar_valued, tail> : _eval_imfreq_base_impl {
- 
    template <typename G> evaluator(G *) {};
-   using _eval_imfreq_base_impl::operator();
 
-   template <typename G> std::complex<double> operator()(G const *g, matsubara_freq const &f) const {
+   // technical details...
+   using r_t = std14::conditional_t<std::is_same<Target, scalar_valued>::value, dcomplex, matrix<dcomplex>>;
+   using rv_t = std14::conditional_t<std::is_same<Target, scalar_valued>::value, dcomplex, matrix_view<dcomplex>>;
+
+   template <typename S> auto _evaluate_sing(matrix_valued, S const &s, matsubara_freq const &f) const RETURN(evaluate(s, f));
+   template <typename S> auto _evaluate_sing(scalar_valued, S const &s, matsubara_freq const &f) const RETURN(evaluate(s, f)(0, 0));
+   rv_t _evaluate_sing(Target, nothing, matsubara_freq const &f) const {
+    TRIQS_RUNTIME_ERROR << "Evaluation out of mesh";
+    return r_t{};
+   }
+
+   // evaluator
+   template <typename G> rv_t operator()(G const *g, matsubara_freq const &f) const {
     if (g->mesh().positive_only()) { // only positive Matsubara frequencies
      if ((f.n >= 0) && (f.n < g->mesh().size())) return (*g)[f.n];
-     if ((f.n < 0) && ((-f.n - this->sh(g)) < g->mesh().size())) return conj((*g)[-f.n - this->sh(g)]);
+     int sh = (g->mesh().domain().statistic == Fermion ? 1 : 0);
+     if ((f.n < 0) && ((-f.n - sh) < g->mesh().size())) return r_t{conj((*g)[-f.n - sh])};
     } else {
      if ((f.n >= g->mesh().first_index()) && (f.n < g->mesh().size() + g->mesh().first_index())) return (*g)[f.n];
     }
-    return evaluate(g->singularity(),f)(0, 0);
+    return _evaluate_sing(Target{}, g->singularity(), f);
    }
-  };
 
-  // scalar_valued, no tail
-  template <> struct evaluator<imfreq, scalar_valued, nothing> : _eval_imfreq_base_impl {
+  // int -> replace by matsubara_freq
+  template <typename G>
+  AUTO_DECL operator()(G const *g, int n) const
+      RETURN((*g)(matsubara_freq(n, g->mesh().domain().beta, g->mesh().domain().statistic)));
 
-   template <typename G> evaluator(G *) {};
-   using _eval_imfreq_base_impl::operator();
-
-   template <typename G> std::complex<double> operator()(G const *g, matsubara_freq const &f) const {
-    if (g->mesh().positive_only()) { // only positive Matsubara frequencies
-     if ((f.n >= 0) && (f.n < g->mesh().size())) return (*g)[f.n];
-     if ((f.n < 0) && ((-f.n - this->sh(g)) < g->mesh().size())) return conj((*g)[-f.n - this->sh(g)]);
-    } else {
-     if ((f.n >= g->mesh().first_index()) && (f.n < g->mesh().size() + g->mesh().first_index())) return (*g)[f.n];
-    }
-    TRIQS_RUNTIME_ERROR<< "evaluation out of mesh";
-    return 0;
-   }
-  };
-
-  // matrix_valued, tail
-  template <> struct evaluator<imfreq, matrix_valued, tail> : _eval_imfreq_base_impl {
-
-   template <typename G> evaluator(G *) {};
-   using _eval_imfreq_base_impl::operator();
-
-   template <typename G> arrays::matrix_const_view<std::complex<double>> operator()(G const *g, matsubara_freq const &f) const {
-    if (g->mesh().positive_only()) { // only positive Matsubara frequencies
-     if ((f.n >= 0) && (f.n < g->mesh().size())) return (*g)[f.n]();
-     if ((f.n < 0) && ((-f.n - this->sh(g)) < g->mesh().size()))
-      return arrays::matrix<std::complex<double>>{conj((*g)[-f.n - this->sh(g)]())};
-    } else {
-     if ((f.n >= g->mesh().first_index()) && (f.n < g->mesh().size() + g->mesh().first_index())) return (*g)[f.n];
-    }
-    return evaluate(g->singularity(), f);
-   }
-  };
-
-  // matrix_valued, no tail
-  template <> struct evaluator<imfreq, matrix_valued, nothing> : _eval_imfreq_base_impl {
-
-   template <typename G> evaluator(G *) {};
-   using _eval_imfreq_base_impl::operator();
-
-   template <typename G> arrays::matrix_const_view<std::complex<double>> operator()(G const *g, matsubara_freq const &f) const {
-    if (g->mesh().positive_only()) { // only positive Matsubara frequencies
-     if ((f.n >= 0) && (f.n < g->mesh().size())) return (*g)[f.n]();
-     if ((f.n < 0) && ((-f.n - this->sh(g)) < g->mesh().size()))
-      return arrays::matrix<std::complex<double>>{conj((*g)[-f.n - this->sh(g)]())};
-    } else {
-     if ((f.n >= g->mesh().first_index()) && (f.n < g->mesh().size() + g->mesh().first_index())) return (*g)[f.n];
-    }
-    TRIQS_RUNTIME_ERROR<< "evaluation out of mesh";
-    auto r = arrays::matrix<std::complex<double>>{get_target_shape(*g)};
-    r() = 0;
-    return r;
-   }
+  // Evaluate on the tail : compose the tails
+  template <typename G> typename G::singularity_t operator()(G const *g, tail_view t) const {
+   return compose(g->singularity(), t);
+  }
   };
 
  } // gfs_implementation
-
 }
 }
