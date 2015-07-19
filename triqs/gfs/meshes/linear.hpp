@@ -32,6 +32,7 @@ namespace gfs {
   using index_t = long;
   using linear_index_t = long;
   using domain_pt_t = typename domain_t::point_t;
+  using default_interpol_policy = interpol_t::Linear1d;
 
   static_assert(!std::is_base_of<std::complex<double>, domain_pt_t>::value,
                 "Internal error : cannot use Linear Mesh in this case");
@@ -57,11 +58,6 @@ namespace gfs {
 
   long index_to_linear(index_t ind) const { return ind; }
 
-  /// Is the point in mesh ?
-  bool is_within_boundary(index_t const &p) const { return ((p >= x_min()) && (p <= x_max())); }
-  // ADAPT for window
-  //bool is_within_boundary(index_t const &p) const { return ((p >= first_index_window()) && (p <= last_index_window())); }
-
   /// Type of the mesh point
   using mesh_point_t = mesh_point<linear_mesh>;
 
@@ -83,6 +79,33 @@ namespace gfs {
   }
   bool operator!=(linear_mesh const &M) const { return !(operator==(M)); }
 
+  /// Is the point in mesh ?
+  bool is_within_boundary(index_t const &p) const { return ((p >= x_min()) && (p <= x_max())); }
+  // ADAPT for window
+  //bool is_within_boundary(index_t const &p) const { return ((p >= first_index_window()) && (p <= last_index_window())); }
+
+  // -------------- Evaluation of a function on the grid --------------------------
+  struct interpol_data_t {
+   double w0, w1;
+   long i0, i1;
+  };
+
+  interpol_data_t get_interpolation_data(interpol_t::Linear1d, double x) const {
+   double w;
+   long i;
+   bool in;
+   std::tie(in, i, w) = windowing(*this, x);
+   if (!in) TRIQS_RUNTIME_ERROR <<"out of window";
+   return {1- w, w, i, i + 1};
+  }
+
+  template<typename F>
+  auto evaluate(interpol_t::Linear1d, F const & f, double x) const {
+   auto id = get_interpolation_data(default_interpol_policy{}, x);
+   return id.w0 * f[id.i0] + id.w1 * f[id.i1];
+  }
+
+  // -------------- HDF5  --------------------------
   /// Write into HDF5
   friend void h5_write(h5::group fg, std::string subgroup_name, linear_mesh const &m) {
    h5::group gr = fg.create_group(subgroup_name);

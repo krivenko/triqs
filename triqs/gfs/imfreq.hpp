@@ -24,7 +24,6 @@
 #include "./local/tail.hpp"
 #include "./local/no_tail.hpp"
 #include "./meshes/matsubara_freq.hpp"
-#include "./evaluators.hpp"
 namespace triqs {
 namespace gfs {
 
@@ -51,28 +50,6 @@ namespace gfs {
 
   /// ---------------------------  evaluator ---------------------------------
 
-#ifndef TRIQS_CPP11
-  // simple evaluation : take the point on the grid...
-  template <> struct evaluator_of_clef_expression<imfreq> {
-   private : 
-    long __as_long(long p) { return p; }
-    long __as_long(matsubara_freq const &p) { return p.n; }
-
-   public:
-   //template <typename Arg> bool is_in_mesh(gf_mesh<imfreq> const &m, Arg const &p) {
-   // long n = __as_long(p);
-   // return ((n >= m.first_index()) && (n < m.size() + m.first_index()));
-   // }
-
-  template <typename Expr, int N, typename Arg>
-   auto operator()(Expr const &expr, clef::placeholder<N>, gf_mesh<imfreq> const &m, Arg const &p) {
-    long n = __as_long(p);
-    return clef::eval(expr, clef::placeholder<N>() = no_cast(m[n]));
-   }
-  };
-#endif
-
-  // ------------- evaluator  -------------------
   // handle the case where the matsu. freq is out of grid...
 
   struct _eval_imfreq_base_impl {
@@ -83,9 +60,6 @@ namespace gfs {
    template <typename G>
    AUTO_DECL operator()(G const *g, int n) const
        RETURN((*g)(matsubara_freq(n, g->mesh().domain().beta, g->mesh().domain().statistic)));
-
-   template <typename G>
-   auto operator()(G const *g, __no_cast<typename gf_mesh<imfreq>::mesh_point_t> const &p) const RETURN((*g)[p.value]);
 
    template <typename G> typename G::singularity_t operator()(G const *g, tail_view t) const {
     return compose(g->singularity(),t);
@@ -169,64 +143,6 @@ namespace gfs {
   };
 
  } // gfs_implementation
-
- // FOR LEGACY PYTHON CODE ONLY
- // THIS MUST be kept for python operations 
- // specific operations (for legacy python code).
- // +=, -= with a matrix
- inline void operator+=(gf_view<imfreq> g, arrays::matrix<std::complex<double>> const &m) {
-  for (int u = 0; u < int(first_dim(g.data())); ++u) g.data()(u, arrays::ellipsis()) += m;
-  g.singularity()(0) += m;
- }
-
- inline void operator-=(gf_view<imfreq> g, arrays::matrix<std::complex<double>> const &m) {
-  for (int u = 0; u < int(first_dim(g.data())); ++u) g.data()(u, arrays::ellipsis()) -= m;
-  g.singularity()(0) -= m;
- }
-
- inline void operator+=(gf_view<imfreq> g, std::complex<double> a) {
-  operator+=(g, arrays::make_unit_matrix(get_target_shape(g)[0], a));
- }
- inline void operator-=(gf_view<imfreq> g, std::complex<double> a) {
-  operator-=(g, arrays::make_unit_matrix(get_target_shape(g)[0], a));
- }
-
-
- inline gf<imfreq> operator+(gf<imfreq> g, arrays::matrix<std::complex<double>> const &m) {
-  g() += m;
-  return g;
- }
-
- inline gf<imfreq> operator+(gf<imfreq> g, std::complex<double> const &m) {
-  g() += m; // () is critical of infinite loop -> segfault
-  return g;
- }
-
- inline gf<imfreq> operator+(std::complex<double> const &m, gf<imfreq> g) { return g + m; }
- inline gf<imfreq> operator+(arrays::matrix<std::complex<double>> const &m, gf<imfreq> g) { return g + m; }
-
- inline gf<imfreq> operator-(gf<imfreq> g, arrays::matrix<std::complex<double>> const &m) {
-  g() -= m;
-  return g;
- }
-
- inline gf<imfreq> operator-(gf<imfreq> g, std::complex<double> const &m) {
-  g() -= m;
-  return g;
- }
-
- inline gf<imfreq> operator-(std::complex<double> const &m, gf<imfreq> g) { 
-  g *= -1;
-  g+=m;
-  return g;
-  }
-
- inline gf<imfreq> operator-(arrays::matrix<std::complex<double>> const &m, gf<imfreq> g) { 
-  g *= -1;
-  g+=m;
-  return g;
- }
-
 
 }
 }

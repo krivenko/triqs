@@ -61,6 +61,14 @@ namespace gfs {
  // the gf mesh
  template <typename Variable> struct gf_mesh;
 
+ // Interpolation policies
+ namespace interpol_t {
+  struct None{};
+  struct Product{};
+  struct Linear1d{};
+  struct Linear2d{};
+ }
+
  // The regular type
  template <typename Variable, typename Target = gf_default_target_t<Variable>,
            typename Singularity = gf_default_singularity_t<Variable, Target>, typename Evaluator = void>
@@ -85,9 +93,17 @@ namespace gfs {
  namespace gfs_implementation { // never use using of this...
 
   // evaluator regroup functions to evaluate the function.
+  // default : one variable. Will be specialized in more complex cases.
   template <typename Variable, typename Target, typename Singularity> struct evaluator {
-   static constexpr int arity = 0;
+   static constexpr int arity = 1;
    template <typename G> evaluator(G *) {};
+
+   template <typename G, typename X>
+   auto operator()(G const *g, X x) const RETURN((g -> mesh().evaluate(typename G::mesh_t::default_interpol_policy{}, *g, x)));
+
+   template <typename G> typename G::singularity_t operator()(G const *g, tail_view t) const {
+    return compose(g->singularity(), t);
+   }
   };
 
   // closest_point mechanism

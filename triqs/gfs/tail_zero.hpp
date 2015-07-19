@@ -27,9 +27,26 @@ namespace gfs {
  //------------------------------------------------------
 
  // A simple replacement of tail when there is none to maintain generic code simple...
- struct tail_zero {
-  template <typename... Args> explicit tail_zero(Args &&...) {} // takes anything, do tail_zero..
-  tail_zero() {}
+
+ template <typename Target> struct tail_zero_impl;
+ template <> struct tail_zero_impl<scalar_valued> {
+  std::complex<double> zero;
+  template <typename T> tail_zero_impl(T) { zero = 0; }
+  tail_zero_impl() = default;
+ };
+ template <> struct tail_zero_impl<matrix_valued> {
+  matrix<std::complex<double>> zero;
+  template <typename S> tail_zero_impl(S const & s) : zero(s) { zero() = 0; }
+  tail_zero_impl() = default;
+ };
+ template <int R> struct tail_zero_impl<tensor_valued<R>> {
+  array<std::complex<double>,R> zero;
+  template <typename S> tail_zero_impl(S const & s) : zero(s) { zero() = 0; }
+  tail_zero_impl() = default;
+ };
+
+ template <typename Target> struct tail_zero : tail_zero_impl<Target> {
+  using tail_zero_impl<Target>::template tail_zero_impl;
   using const_view_type = tail_zero;
   using view_type = tail_zero;
   using regular_type = tail_zero;
@@ -37,32 +54,37 @@ namespace gfs {
   template <typename RHS> void operator=(RHS &&) {}
   friend void h5_write(h5::group, std::string subgroup_name, tail_zero) {}
   friend void h5_read(h5::group, std::string subgroup_name, tail_zero) {}
-  template <typename... A> friend tail_zero slice(tail_zero, A...) { return tail_zero(); }
+  //template <typename... A> friend tail_zero slice(tail_zero const &t, A...) { return t; }
   friend class boost::serialization::access;
   template <class Archive> void serialize(Archive &ar, const unsigned int version) {}
   friend tail_zero operator+(tail_zero, tail_zero) { return tail_zero(); }
   template <typename RHS> friend void assign_singularity_from_function(tail_zero &, RHS) {}
   template<typename A> bool check_size(A) {return true;}
   bool is_empty() const { return false;}
- };
 
- // Check if T is tail_zero
- //template <typename T> constexpr bool is_tail_zero() { return std::is_same<tail_zero, T>::value; }
+  template<int ... pos, typename T, typename ...X> friend nothing partial_eval_linear_index(tail_zero<T>, X&&...) { return {};}
+  template <typename T> friend tail_zero transpose(tail_zero const & t) { return t;}
+  //template <typename T> friend tail_zero inverse(tail_zero const & t) { return t;}
+  template <typename T> friend tail_zero conj(tail_zero const & t) { return t;}
+  template <typename T> friend tail_zero compose(tail_zero const & t,T&) { return t;}
+  //template <typename... X> friend tail_zero slice_target(tail_zero const & t, X...) { return t; }
 
- template<int ... pos, typename ...T> nothing partial_eval_linear_index(tail_zero, T&&...) { return {};}
- inline tail_zero transpose(tail_zero) { return {};}
- inline tail_zero inverse(tail_zero) { return {};}
- inline tail_zero conj(tail_zero) { return {};}
- template <typename T> tail_zero compose(tail_zero,T&) { return {};}
- template <typename... T> tail_zero slice_target(tail_zero, T...) { return tail_zero(); }
- template <typename T> tail_zero operator+(tail_zero, T const &) { return tail_zero(); }
- template <typename T> tail_zero operator-(tail_zero, T const &) { return tail_zero(); }
- template <typename T> tail_zero operator*(tail_zero, T const &) { return tail_zero(); }
- template <typename T> tail_zero operator/(tail_zero, T const &) { return tail_zero(); }
- template <typename T> TYPE_DISABLE_IF(tail_zero, std::is_same<T, tail_zero>) operator+(T const &, tail_zero) { return tail_zero(); }
- template <typename T> TYPE_DISABLE_IF(tail_zero, std::is_same<T, tail_zero>) operator-(T const &, tail_zero) { return tail_zero(); }
- template <typename T> TYPE_DISABLE_IF(tail_zero, std::is_same<T, tail_zero>) operator*(T const &, tail_zero) { return tail_zero(); }
- template <typename T> TYPE_DISABLE_IF(tail_zero, std::is_same<T, tail_zero>) operator/(T const &, tail_zero) { return tail_zero(); }
+  template<typename ... X> friend auto evaluate(tail_zero const &t, X...) { return t.zero;} 
+  };
+
+  // all operations are neutral
+  template <typename T, typename X> tail_zero<T> operator+(tail_zero<T>const & t, X const &) { return t; }
+  template <typename T, typename X> tail_zero<T> operator-(tail_zero<T>const & t, X const &) { return t; }
+  template <typename T, typename X> tail_zero<T> operator*(tail_zero<T>const & t, X const &) { return t; }
+  template <typename T, typename X> tail_zero<T> operator/(tail_zero<T>const & t, X const &) { return t; }
+  template <typename T, typename X>
+  TYPE_DISABLE_IF(tail_zero<T>, std::is_same<X, tail_zero<T>>) operator+(X const &, tail_zero<T> const &t) { return t; }
+  template <typename T, typename X>
+  TYPE_DISABLE_IF(tail_zero<T>, std::is_same<X, tail_zero<T>>) operator-(X const &, tail_zero<T> const & t) { return t; }
+  template <typename T, typename X>
+  TYPE_DISABLE_IF(tail_zero<T>, std::is_same<X, tail_zero<T>>) operator*(X const &, tail_zero<T>const & t) { return t;}
+  template <typename T, typename X>
+  TYPE_DISABLE_IF(tail_zero<T>, std::is_same<X, tail_zero<T>>) operator/(X const &, tail_zero<T>const & t) { return t;}
 }
 
 namespace mpi {
@@ -70,13 +92,11 @@ namespace mpi {
  // ---------------------------------------------------------------------------------------
  //  Do nothing for tail_zero...
  // ---------------------------------------------------------------------------------------
- template <> struct mpi_impl<gfs::tail_zero> {
-  template <typename Tag> static void invoke2(gfs::tail_zero &lhs, Tag, communicator c, gfs::tail_zero const &a, int root) {}
-  template <typename Tag> static gfs::tail_zero invoke(Tag, communicator c, gfs::tail_zero const &a, int root) {
-   return gfs::tail_zero();
-  }
-  static void reduce_in_place(communicator c, gfs::tail_zero &a, int root) {}
-  static void broadcast(communicator c, gfs::tail_zero &a, int root) {}
+ template <typename T> struct mpi_impl<gfs::tail_zero<T>> {
+  template <typename Tag> static void invoke2(gfs::tail_zero<T> &lhs, Tag, communicator c, gfs::tail_zero<T> const &a, int root) {}
+  template <typename Tag> static gfs::tail_zero<T> invoke(Tag, communicator c, gfs::tail_zero<T> const &a, int root) { return a; }
+  static void reduce_in_place(communicator c, gfs::tail_zero<T> &a, int root) {}
+  static void broadcast(communicator c, gfs::tail_zero<T> &a, int root) {}
  };
 }
 }

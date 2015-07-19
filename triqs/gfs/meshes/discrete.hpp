@@ -82,6 +82,13 @@ namespace gfs {
   bool operator==(discrete_mesh const &M) const { return (_dom == M._dom); }
   bool operator!=(discrete_mesh const &M) const { return !(operator==(M)); }
 
+  // -------------- Evaluation of a function on the grid --------------------------
+
+  long get_interpolation_data(interpol_t::None, long n) const { return n;}
+  
+  template <typename F> auto evaluate(interpol_t::None, F const &f, long n) const { return f[n]; }
+
+  // -------------- HDF5  --------------------------
   /// Write into HDF5
   friend void h5_write(h5::group fg, std::string subgroup_name, discrete_mesh const &m) {
    h5::group gr = fg.create_group(subgroup_name);

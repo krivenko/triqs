@@ -26,6 +26,7 @@ namespace triqs {
 namespace gfs {
 
  struct imfreq {};
+
  template <> struct mesh_point<gf_mesh<imfreq>>; //forward
 
  // ---------------------------------------------------------------------------
@@ -38,6 +39,7 @@ namespace gfs {
   using index_t = long;
   using linear_index_t = long;
   using domain_pt_t = typename domain_t::point_t;
+  using default_interpol_policy = interpol_t::None;
 
   // ----- constructors -------------------
 
@@ -120,10 +122,6 @@ namespace gfs {
   /// Is the mesh only for positive omega_n (G(tau) real))
   bool positive_only() const { return _positive_only;}
 
-  /// Is the frequency in mesh ?
-  bool is_within_boundary(long n) const { return ((n >= first_index_window()) && (n <= last_index_window())); }
-  bool is_within_boundary(matsubara_freq const &f) const { return is_within_boundary(f.n);}
-
   /// Type of the mesh point
   using mesh_point_t = mesh_point<gf_mesh>;
 
@@ -142,6 +140,21 @@ namespace gfs {
   }
   bool operator!=(gf_mesh const &M) const { return !(operator==(M)); }
 
+  /// Is the frequency in mesh ?
+  bool is_within_boundary(long n) const { return ((n >= first_index_window()) && (n <= last_index_window())); }
+  bool is_within_boundary(matsubara_freq const &f) const { return is_within_boundary(f.n);}
+
+  // -------------- Evaluation of a function on the grid --------------------------
+
+  // is it a good idea to overload on n ???
+  long get_interpolation_data(interpol_t::None, matsubara_freq n) const { return n.n;}
+  long get_interpolation_data(interpol_t::None, long n) const { return n;}
+  
+  template <typename F> auto evaluate(interpol_t::None, F const &f, matsubara_freq n) const { return f[n.n]; }
+  template <typename F> auto evaluate(interpol_t::None, F const &f, long n) const { return f[n]; }
+
+  // -------------- HDF5  --------------------------
+ 
   /// Write into HDF5
   friend void h5_write(h5::group fg, std::string subgroup_name, gf_mesh const &m) {
    h5::group gr = fg.create_group(subgroup_name);

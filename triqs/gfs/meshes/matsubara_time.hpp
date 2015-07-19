@@ -37,6 +37,23 @@ namespace gfs {
   gf_mesh(gf_mesh const &x)  = default;
   gf_mesh(matsubara_time_domain d, int n_time_slices) : B(d, 0, d.beta, n_time_slices) {}
   gf_mesh(double beta, statistic_enum S, int n_time_slices) : gf_mesh({beta, S}, n_time_slices) {}
+
+  // redefine the evaluation to handle the anti-periodicity of fermions.
+  template <typename F> auto evaluate(interpol_t::Linear1d, F const &f, double tau) const {
+  
+   double beta = this->domain().beta;
+   int p = std::floor(tau / beta);
+   tau -= p * beta;
+
+   auto id = this->get_interpolation_data(interpol_t::Linear1d{}, tau);
+
+   if ((this->domain().statistic == Fermion) && (p % 2 != 0)) {
+    id.w0 = -id.w0;
+    id.w1 = -id.w1;
+   }
+
+   return id.w0 * f[id.i0] + id.w1 * f[id.i1];
+  }
  };
 
  //-------------------------------------------------------

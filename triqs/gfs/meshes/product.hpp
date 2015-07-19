@@ -24,6 +24,8 @@
 #include <triqs/utility/tuple_tools.hpp>
 #include <triqs/utility/mini_vector.hpp>
 #include <triqs/utility/c14.hpp>
+#include "./multivar_eval.hpp"
+
 namespace triqs {
 namespace gfs {
 
@@ -55,6 +57,7 @@ namespace gfs {
   using m_pt_tuple_t = std::tuple<typename gf_mesh<Ms>::mesh_point_t...>;
   using domain_pt_t = typename domain_t::point_t;
   using linear_index_t = std::tuple<typename gf_mesh<Ms>::linear_index_t...>;
+  using default_interpol_policy = interpol_t::Product;
   
   struct index_t {
    std::tuple<typename gf_mesh<Ms>::index_t...> _i;
@@ -196,7 +199,18 @@ namespace gfs {
   /// Mesh comparison
   friend bool operator==(gf_mesh const &M1, gf_mesh const &M2) { return M1.m_tuple == M2.m_tuple; }
 
-  /// Write into HDF5
+  // -------------- Evaluation of a function on the grid --------------------------
+
+  // not implemented
+  long get_interpolation_data(interpol_t::None, long n) = delete;
+
+  template <typename F, typename... Args> auto evaluate(interpol_t::Product, F const &f, Args &&... args) const {
+   multivar_eval<typename gf_mesh<Ms>::default_interpol_policy...> ev;
+   return ev(f, std::forward<Args>(args)...);
+  } 
+
+  // -------------- HDF5  --------------------------
+   /// Write into HDF5
   friend void h5_write(h5::group fg, std::string subgroup_name, gf_mesh const &m) {
    h5::group gr = fg.create_group(subgroup_name);
    auto l = [gr](int N, auto const &m) { h5_write(gr, "MeshComponent" + std::to_string(N), m); };
