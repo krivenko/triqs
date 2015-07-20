@@ -19,9 +19,7 @@
  *
  ******************************************************************************/
 #pragma once
-#include "./tools.hpp"
 #include "./gf.hpp"
-#include "./local/tail.hpp"
 #include "./domains/R.hpp"
 #include "../lattice/regular_bz_mesh.hpp"
 
@@ -30,14 +28,9 @@ namespace gfs {
 
  namespace gfs_implementation {
 
-  // h5 name
   template <typename Singularity> struct h5_name<brillouin_zone, matrix_valued, Singularity> {
    static std::string invoke() { return "BZ"; }
   };
-
-  /// ---------------------------  data access  ---------------------------------
-  template <> struct data_proxy<brillouin_zone, matrix_valued> : data_proxy_array<std::complex<double>, 3> {};
-  template <> struct data_proxy<brillouin_zone, scalar_valued> : data_proxy_array<std::complex<double>, 1> {};
 
  }
 }

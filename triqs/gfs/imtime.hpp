@@ -19,11 +19,7 @@
  *
  ******************************************************************************/
 #pragma once
-#include "./tools.hpp"
 #include "./gf.hpp"
-#include "./local/tail.hpp"
-#include "./local/no_tail.hpp"
-#include "./domains/matsubara.hpp"
 #include "./meshes/matsubara_time.hpp"
 
 namespace triqs {

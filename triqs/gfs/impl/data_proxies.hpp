@@ -22,7 +22,7 @@
 #include <triqs/utility/first_include.hpp>
 #include <utility>
 #include <triqs/arrays.hpp>
-#include "../arrays/matrix_tensor_proxy.hpp"
+#include <triqs/arrays/matrix_tensor_proxy.hpp>
 
 //#define TRIQS_GF_DATA_PROXIES_WITH_SIMPLE_VIEWS
 

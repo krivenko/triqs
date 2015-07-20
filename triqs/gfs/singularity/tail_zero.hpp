@@ -19,6 +19,7 @@
  *
  ******************************************************************************/
 #pragma once
+#include "./nothing.hpp"
 
 namespace triqs {
 namespace gfs {

@@ -19,10 +19,7 @@
  *
  ******************************************************************************/
 #pragma once
-#include "./tools.hpp"
 #include "./gf.hpp"
-#include "./local/tail.hpp"
-#include "./local/no_tail.hpp"
 #include "./meshes/matsubara_freq.hpp"
 namespace triqs {
 namespace gfs {

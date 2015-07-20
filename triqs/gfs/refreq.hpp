@@ -20,7 +20,6 @@
  ******************************************************************************/
 #pragma once
 #include "./gf.hpp"
-#include "./local/tail.hpp"
 #include "./meshes/segment.hpp"
 
 namespace triqs {

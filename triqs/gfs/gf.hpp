@@ -25,12 +25,14 @@
 #include <triqs/utility/tuple_tools.hpp>
 #include <triqs/utility/c14.hpp>
 #include <triqs/arrays/h5.hpp>
-#include "gf_indices.hpp"
-#include "tools.hpp"
+#include "./impl/gf_indices.hpp"
+#include "./impl/tools.hpp"
+#include "./singularity/tail.hpp"
+#include "./singularity/nothing.hpp"
+#include "./singularity/tail_zero.hpp"
+#include "./impl/data_proxies.hpp"
 #include <triqs/mpi/gf.hpp>
 #include <vector>
-#include "data_proxies.hpp"
-#include "local/tail.hpp"
 
 namespace triqs {
 namespace gfs {
@@ -920,4 +922,4 @@ template <typename Variable, typename Target, typename Singularity, typename Eva
 void swap(triqs::gfs::gf_view<Variable, Target, Singularity, Evaluator, C1> &a,
           triqs::gfs::gf_view<Variable, Target, Singularity, Evaluator, C2> &b) = delete;
 }
-#include "./gf_expr.hpp"
+#include "./impl/gf_expr.hpp"

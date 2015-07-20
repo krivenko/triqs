@@ -114,7 +114,11 @@ namespace gfs {
   }
 
   template<typename F>
-  auto evaluate(default_interpol_policy, F const & f, index_t const &x) const {
+  auto evaluate(default_interpol_policy, F const & f, index_t const &x) const 
+#ifdef TRIQS_CPP11 
+->std14::decay_t<decltype(f[0])> 
+#endif
+  {
    auto id = get_interpolation_data(default_interpol_policy{}, x);
    return f[id];
   }

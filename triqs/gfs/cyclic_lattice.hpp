@@ -19,9 +19,7 @@
  *
  ******************************************************************************/
 #pragma once
-#include "./tools.hpp"
 #include "./gf.hpp"
-#include "./local/tail.hpp"
 #include "./domains/R.hpp"
 #include "../lattice/cyclic_lattice.hpp"
 
@@ -30,14 +28,9 @@ namespace gfs {
 
  namespace gfs_implementation {
 
-  // h5 name
   template <typename Singularity> struct h5_name<cyclic_lattice, matrix_valued, Singularity> {
    static std::string invoke() { return "R"; }
   };
-
-  /// ---------------------------  data access  ---------------------------------
-  template <> struct data_proxy<cyclic_lattice, matrix_valued> : data_proxy_array<std::complex<double>, 3> {};
-  template <> struct data_proxy<cyclic_lattice, scalar_valued> : data_proxy_array<std::complex<double>, 1> {};
 
  }
 }

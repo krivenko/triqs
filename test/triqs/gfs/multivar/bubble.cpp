@@ -1,9 +1,6 @@
 #define TRIQS_ARRAYS_ENFORCE_BOUNDCHECK
-#include <triqs/gfs.hpp>
-#include <triqs/gfs/bz.hpp>
-#include <triqs/gfs/cyclic_lattice.hpp>
-#include <triqs/gfs/local/fourier_lattice.hpp>
 #include "test_tools.hpp"
+#include <triqs/gfs.hpp>
 
 namespace h5 = triqs::h5;
 using namespace triqs::gfs;

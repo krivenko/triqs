@@ -19,10 +19,9 @@
  *
  ******************************************************************************/
 #pragma once
-#include "./tools.hpp"
 #include "./gf.hpp"
 #include "./meshes/product.hpp"
-#include "./tail_zero.hpp"
+#include "./singularity/tail_zero.hpp"
 
 namespace triqs {
 namespace gfs {
