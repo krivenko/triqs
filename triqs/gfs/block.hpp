@@ -162,7 +162,7 @@ namespace gfs {
  // -------------------------------   Free functions   --------------------------------------------------
 
  /// The number of blocks
- template <typename G> TYPE_ENABLE_IF(int, is_block_gf_or_view<G>) n_blocks(G &g) { return g.mesh().size(); }
+ template <typename G> TYPE_ENABLE_IF(int, is_block_gf_or_view<G>) n_blocks(G const &g) { return g.mesh().size(); }
 
  /// The vector of names of the blocks
  template <typename G> TYPE_ENABLE_IF(std::vector<std::string> const &, is_block_gf_or_view<G>) get_block_names(G const &g) {
@@ -172,10 +172,10 @@ namespace gfs {
  // -------------------------------   Map --------------------------------------------------
  // map takes a function f, a block_gf or its view g
  // then it computes f(g[i]) for all i
- // If the result of f is : 
- //  * a gf             : then map returns a block_gf 
- //  * a gf_view        : then map returns a block_gf_view 
- //  * a gf_const_view  : then map returns a block_gf_const_view 
+ // If the result of f is :
+ //  * a gf             : then map returns a block_gf
+ //  * a gf_view        : then map returns a block_gf_view
+ //  * a gf_const_view  : then map returns a block_gf_const_view
  //  * otherwise        : then map returns a std::vector<>
  namespace impl {
 
@@ -213,8 +213,7 @@ namespace gfs {
  }
 
 #ifndef TRIQS_CPP11
- template <typename F, typename G>
- auto map_block_gf(F &&f, G &&g) {
+ template <typename F, typename G> auto map_block_gf(F &&f, G &&g) {
   static_assert(is_block_gf_or_view<G>::value, "map_block_gf requires a block gf");
   return impl::map<F, G>::invoke(std::forward<F>(f), std::forward<G>(g));
  }
@@ -231,9 +230,9 @@ namespace gfs {
   return impl::map<F, G>::invoke(std::forward<F>(f), std::forward<G>(g));
  }
 
- // -------------------------------   some functions mapped ... --------------------------------------------------
+// -------------------------------   some functions mapped ... --------------------------------------------------
 
- // A macro to automatically map a function to the block gf
+// A macro to automatically map a function to the block gf
 #define TRIQS_PROMOTE_AS_BLOCK_GF_FUNCTION(f)                                                                                    \
  namespace impl {                                                                                                                \
   struct _mapped_##f {                                                                                                           \
@@ -245,66 +244,55 @@ namespace gfs {
  template <typename G> auto f(gf<block_index, G> const &g) RETURN(map_block_gf(impl::_mapped_##f{}, g));                         \
  template <typename G> auto f(gf_const_view<block_index, G> g) RETURN(map_block_gf(impl::_mapped_##f{}, g));
 
-TRIQS_PROMOTE_AS_BLOCK_GF_FUNCTION(reinterpret_scalar_valued_gf_as_matrix_valued);
+ TRIQS_PROMOTE_AS_BLOCK_GF_FUNCTION(reinterpret_scalar_valued_gf_as_matrix_valued);
+ TRIQS_PROMOTE_AS_BLOCK_GF_FUNCTION(inverse);
 
  // -------------------------------   an iterator over the blocks --------------------------------------------------
 
  template <typename G>
- class block_gf_iterator : std::iterator<std::forward_iterator_tag, std14::decay_t<decltype(std::declval<G>()[0])>> {
+ class block_gf_iterator : std::iterator<std::forward_iterator_tag, std14::remove_reference_t<decltype(std::declval<G>()[0])>> {
   G *bgf = NULL;
-  long n =0;
-  
+  long n = 0;
+
   public:
-  block_gf_iterator () = default;
+  block_gf_iterator() = default;
   block_gf_iterator(G &bgf, bool at_end = false) : bgf(&bgf), n(at_end ? bgf.mesh().size() : 0) {}
- 
-  using value_type = std14::decay_t<decltype(std::declval<G>()[0])>;
 
-  value_type & operator*() { return (*bgf)[n];}
-  value_type & operator->() { return (*bgf)[n];}
+  using value_type = std14::remove_reference_t<decltype(std::declval<G>()[0])>;
 
-  block_gf_iterator & operator++() { ++n; return *this;}
-  block_gf_iterator operator++(int) { auto it = *this; ++n; return it;}
-  
-  bool operator==(block_gf_iterator const &other) const { return ((bgf == other.bgf) && (n == other.n));}
-  bool operator!=(block_gf_iterator const &other) const { return (!operator==(other));}
+  value_type &operator*() { return (*bgf)[n]; }
+  value_type &operator->() { return (*bgf)[n]; }
+
+  block_gf_iterator &operator++() {
+   ++n;
+   return *this;
+  }
+
+  block_gf_iterator operator++(int) {
+   auto it = *this;
+   ++n;
+   return it;
+  }
+
+  bool operator==(block_gf_iterator const &other) const { return ((bgf == other.bgf) && (n == other.n)); }
+  bool operator!=(block_gf_iterator const &other) const { return (!operator==(other)); }
  };
 
  //------------
- 
- template <typename T, typename S, typename E, bool B, bool C>
- block_gf_iterator<gf_impl<block_index, T, S, E, B, C>>
- begin(gf_impl<block_index, T, S, E, B, C> &bgf) {
+
+ template <typename G> std14::enable_if_t<is_block_gf_or_view<G>::value, block_gf_iterator<G>> begin(G &bgf) {
   return {bgf, false};
  }
 
- template <typename T, typename S, typename E, bool B, bool C>
- block_gf_iterator<gf_impl<block_index, T, S, E, B, C>>
- end(gf_impl<block_index, T, S, E, B, C> &bgf) {
-  return {bgf, true};
- }
- 
- template <typename T, typename S, typename E, bool B, bool C>
- block_gf_iterator<gf_impl<block_index, T, S, E, B, C> const>
- begin(gf_impl<block_index, T, S, E, B, C> const &bgf) {
+ template <typename G> std14::enable_if_t<is_block_gf_or_view<G>::value, block_gf_iterator<G const>> cbegin(G const &bgf) {
   return {bgf, false};
  }
 
- template <typename T, typename S, typename E, bool B, bool C>
- block_gf_iterator<gf_impl<block_index, T, S, E, B, C> const>
- end(gf_impl<block_index, T, S, E, B, C> const &bgf) {
+ template <typename G> std14::enable_if_t<is_block_gf_or_view<G>::value, block_gf_iterator<G>> end(G &bgf) {
   return {bgf, true};
  }
 
- template <typename T, typename S, typename E, bool B, bool C>
- block_gf_iterator<gf_impl<block_index, T, S, E, B, C> const>
- cbegin(gf_impl<block_index, T, S, E, B, C> const &bgf) {
-  return {bgf, false};
- }
-
- template <typename T, typename S, typename E, bool B, bool C>
- block_gf_iterator<gf_impl<block_index, T, S, E, B, C> const>
- cend(gf_impl<block_index, T, S, E, B, C> const &bgf) {
+ template <typename G> std14::enable_if_t<is_block_gf_or_view<G>::value, block_gf_iterator<G const>> cend(G const &bgf) {
   return {bgf, true};
  }
 }
