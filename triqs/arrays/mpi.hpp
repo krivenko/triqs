@@ -130,14 +130,14 @@ namespace arrays {
      if (in_place)
       MPI_Reduce((c.rank() == root ? MPI_IN_PLACE : rhs_p), rhs_p, rhs_n_elem, D, MPI_SUM, root, c.get());
      else {
-      if (c.rank() == root) lhs.resize(laz.domain());
+      if (c.rank() == root) resize_or_check_if_view(lhs,laz.domain().lengths());
       MPI_Reduce(rhs_p, lhs_p, rhs_n_elem, D, MPI_SUM, root, c.get());
      }
     } else { // all reduce
      if (in_place)
       MPI_Allreduce(MPI_IN_PLACE, rhs_p, rhs_n_elem, D, MPI_SUM, c.get());
      else {
-      lhs.resize(laz.domain());
+      resize_or_check_if_view(lhs,laz.domain().lengths());
       MPI_Allreduce(rhs_p, lhs_p, rhs_n_elem, D, MPI_SUM, c.get());
      }
     }
