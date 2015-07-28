@@ -63,13 +63,15 @@ class variant {
 
 public:
 
-  using bound_types = std::tuple<Types...>;
-  constexpr static std::size_t n_bound_types = sizeof...(Types);
-  template<std::size_t n> using bound_type = std14::tuple_element_t<0,bound_types>;
+  using bounded_types = std::tuple<Types...>;
+  constexpr static std::size_t n_bounded_types = sizeof...(Types);
+  template<std::size_t N> using bounded_type = std14::tuple_element_t<N,bounded_types>;
 
 private:
 
-  static_assert(n_bound_types > 0,"triqs::utility::variant: list of types must not be empty!");
+  static_assert(n_bounded_types > 0,"triqs::utility::variant: list of bounded types must not be empty");
+  static_assert(std::is_default_constructible<bounded_type<0>>::value,
+                "triqs::utility::variant: the first bounded type must be DefaultConstructible");
   typename aligned_union<Types...>::type data; // Storage
   std::size_t type_id; // Type ID of the stored value
 
@@ -84,12 +86,12 @@ private:
     using type = std14::conditional_t<std::is_convertible<T,T0>::value,T0,
                                       typename find_matching_type<T,Tail...>::type>;
     constexpr static std::size_t id = std::is_convertible<T,T0>::value ?
-                                 n_bound_types - sizeof...(Tail) - 1 :
+                                 n_bounded_types - sizeof...(Tail) - 1 :
                                  find_matching_type<T,Tail...>::id;
   };
   template<typename T, typename T0> struct find_matching_type<T,T0> {
     using type = std14::conditional_t<std::is_convertible<T,T0>::value,T0,void>;
-    constexpr static std::size_t id = std::is_convertible<T,T0>::value ? n_bound_types - 1 : -1;
+    constexpr static std::size_t id = std::is_convertible<T,T0>::value ? n_bounded_types - 1 : -1;
   };
 
   // Implementation: destructor
@@ -126,9 +128,11 @@ private:
   }
 
   // Implementation: stream insertion
-  template<typename T> void print(std::ostream & os) const {
-    os << *reinterpret_cast<T const*>(&data);
-  }
+  struct print_visitor {
+    std::ostream & os;
+    print_visitor(std::ostream & os) : os(os) {}
+    template<typename T> void operator()(T const& x){ os << x; }
+  };
 
   // Implementation: visitation
   template<typename T, typename F>
@@ -142,7 +146,7 @@ private:
 
   // Declare dispatch tables
 #define DECLARE_DT(NAME,RTYPE,ARGS) \
-  constexpr static std::array<RTYPE(variant::*)ARGS,n_bound_types> \
+  constexpr static std::array<RTYPE(variant::*)ARGS,n_bounded_types> \
   NAME##_dt = {&variant::NAME<Types>...};
   DECLARE_DT(destroy,      void,())
   DECLARE_DT(copy,         void,(variant<Types...> const&))
@@ -150,17 +154,20 @@ private:
   DECLARE_DT(assign,       void,(variant<Types...> const&))
   DECLARE_DT(equal,        bool,(variant<Types...> const&) const)
   DECLARE_DT(less,         bool,(variant<Types...> const&) const)
-  DECLARE_DT(print,        void,(std::ostream & os) const)
 #undef DECLARE_DT
 
 public:
 
+  // Default constructor
+  variant() : type_id(0) {
+    ::new(&data) bounded_type<0>();
+  }
+
   // Constructor
   template<typename T, typename MatchingType = find_matching_type<T,Types...>,
            typename = std14::enable_if_t<MatchingType::id != -1>>
-  variant(T v) {
+  variant(T v) : type_id(MatchingType::id) {
     ::new(&data) typename MatchingType::type(v);
-    type_id = MatchingType::id;
   }
 
   // Copy-constructor
@@ -170,7 +177,7 @@ public:
 
   // Move-constructor
   variant(variant && other) : type_id(other.type_id) {
-    (this->*move_dt[type_id])(other);
+    (this->*move_dt[type_id])(std::move(other));
   }
 
   // Destructor
@@ -191,14 +198,14 @@ public:
   // Visitation
   // Return type of f(v) must be the same for any stored type,
   // that is why we can use the first type.
-  template <typename F, typename RType = std14::result_of_t<F(bound_type<0>&)>>
+  template <typename F, typename RType = std14::result_of_t<F(bounded_type<0>&)>>
   friend RType apply_visitor(F &&f, variant & v) {
-    constexpr static std::array<RType(variant::*)(F),n_bound_types> apply_dt = {&variant::apply<Types,F>...};
+    constexpr static std::array<RType(variant::*)(F),n_bounded_types> apply_dt = {&variant::apply<Types,F>...};
     return (v.*apply_dt[v.type_id])(f);
   }
-  template <typename F, typename RType = std14::result_of_t<F(bound_type<0>)>>
+  template <typename F, typename RType = std14::result_of_t<F(bounded_type<0>)>>
   friend RType apply_visitor(F &&f, variant const& v) { // const version
-    constexpr static std::array<RType(variant::*)(F) const,n_bound_types> apply_dt = {&variant::apply<Types,F>...};
+    constexpr static std::array<RType(variant::*)(F) const,n_bounded_types> apply_dt = {&variant::apply<Types,F>...};
     return (v.*apply_dt[v.type_id])(f);
   }
 
@@ -218,7 +225,7 @@ public:
 
   // Stream insertion
   friend std::ostream & operator<<(std::ostream & os, variant const &v) {
-    (v.*print_dt[v.type_id])(os);
+    apply_visitor(print_visitor(os),v);
     return os;
   }
 
@@ -227,7 +234,7 @@ public:
 // Define dispatch tables
 #define DEFINE_DT(NAME,RTYPE,ARGS) \
 template<typename... Types> \
-constexpr std::array<RTYPE(variant<Types...>::*)ARGS,variant<Types...>::n_bound_types> \
+constexpr std::array<RTYPE(variant<Types...>::*)ARGS,variant<Types...>::n_bounded_types> \
 variant<Types...>::NAME##_dt;
 
 DEFINE_DT(destroy,      void,())
@@ -236,7 +243,6 @@ DEFINE_DT(move,         void,(variant<Types...> &&))
 DEFINE_DT(assign,       void,(variant<Types...> const&))
 DEFINE_DT(equal,        bool,(variant<Types...> const&) const)
 DEFINE_DT(less,         bool,(variant<Types...> const&) const)
-DEFINE_DT(print,        void,(std::ostream & os) const)
 #undef DEFINE_DT
 
 }
