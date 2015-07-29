@@ -34,7 +34,7 @@ TEST(Gf, VertexScalar) {
 
  EXPECT_CLOSE(vertex(0, 0, 0), 20);
 
- rw_h5(vertex, "vertexS.h5", "v");
+ rw_h5(vertex, "vertexS", "v");
 }
 
 // -----------------------------------------------------
@@ -52,7 +52,7 @@ TEST(Gf, VertexTensor) {
  vertex[{0, 0, 0}](0, 0, 0) = 10;
  EXPECT_CLOSE((vertex[{0, 0, 0}](0, 0, 0)), 10);
 
- rw_h5(vertex, "vertexT.h5", "v");
+ rw_h5(vertex, "vertexT", "v");
 }
 MAKE_MAIN;
 

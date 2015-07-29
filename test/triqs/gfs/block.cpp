@@ -19,7 +19,7 @@ TEST(Gf, Block) {
   auto B3 = make_block_gf<imfreq>({"a", "b", "c"}, {G1, G1, G1});
   auto B4 = block_gf<imfreq>(1);
 
-  EXPECT_BLOCK_GF_NEAR(B1, rw_h5(B1));
+  EXPECT_BLOCK_GF_NEAR(B1, rw_h5(B1, "block","B1"));
 
   B1[0][0] = 98;
   // not implemented yet
