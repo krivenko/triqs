@@ -121,6 +121,7 @@ TEST(Variant,Basic) {
   EXPECT_MY_STRUCT_MESSAGE("my_struct[1]: destructor");
 
   EXPECT_TRUE(v_my_struct1 == v_string);
+  EXPECT_FALSE(v_int < v_int);
 
   std::stringstream ss;
   ss << v_int << ":";

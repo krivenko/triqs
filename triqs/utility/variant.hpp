@@ -116,16 +116,22 @@ private:
   }
 
   // Implementation: equality comparison
-  template<typename T> bool equal(variant const& other) const {
-    return *reinterpret_cast<T const*>(&data) ==
-           *reinterpret_cast<T const*>(&other.data);
-  }
+  struct equal_visitor {
+    variant const& other;
+    equal_visitor(variant const& other) : other(other) {}
+    template<typename T> bool operator()(T const& x){
+      return x == *reinterpret_cast<T const*>(&other.data);
+    }
+  };
 
   // Implementation: less-than comparison
-  template<typename T> bool less(variant const& other) const {
-    return *reinterpret_cast<T const*>(&data) <
-           *reinterpret_cast<T const*>(&other.data);
-  }
+  struct less_visitor {
+    variant const& other;
+    less_visitor(variant const& other) : other(other) {}
+    template<typename T> bool operator()(T const& x){
+      return x < *reinterpret_cast<T const*>(&other.data);
+    }
+  };
 
   // Implementation: stream insertion
   struct print_visitor {
@@ -152,8 +158,6 @@ private:
   DECLARE_DT(copy,         void,(variant<Types...> const&))
   DECLARE_DT(move,         void,(variant<Types...> &&))
   DECLARE_DT(assign,       void,(variant<Types...> const&))
-  DECLARE_DT(equal,        bool,(variant<Types...> const&) const)
-  DECLARE_DT(less,         bool,(variant<Types...> const&) const)
 #undef DECLARE_DT
 
 public:
@@ -211,16 +215,16 @@ public:
 
   // Comparisons
   bool operator==(variant const& other) const {
-     if(type_id != other.type_id)
-       TRIQS_RUNTIME_ERROR << "triqs::utility::variant: cannot compare stored values of different types";
-     return (this->*equal_dt[type_id])(other);
+    if(type_id != other.type_id)
+      TRIQS_RUNTIME_ERROR << "triqs::utility::variant: cannot compare stored values of different types";
+    return apply_visitor(equal_visitor(other),*this);
   }
   bool operator!=(variant const& other) const { return !(operator==(other)); }
 
   bool operator<(variant const& other) const {
-     if(type_id != other.type_id)
-       TRIQS_RUNTIME_ERROR << "triqs::utility::variant: cannot compare stored values of different types";
-     return (this->*less_dt[type_id])(other);
+    if(type_id != other.type_id)
+      TRIQS_RUNTIME_ERROR << "triqs::utility::variant: cannot compare stored values of different types";
+    return apply_visitor(less_visitor(other),*this);
   }
 
   // Stream insertion
@@ -241,8 +245,6 @@ DEFINE_DT(destroy,      void,())
 DEFINE_DT(copy,         void,(variant<Types...> const&))
 DEFINE_DT(move,         void,(variant<Types...> &&))
 DEFINE_DT(assign,       void,(variant<Types...> const&))
-DEFINE_DT(equal,        bool,(variant<Types...> const&) const)
-DEFINE_DT(less,         bool,(variant<Types...> const&) const)
 #undef DEFINE_DT
 
 }
