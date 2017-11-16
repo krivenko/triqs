@@ -24,7 +24,7 @@
 #include <sstream>
 #include <iostream>
 
-namespace triqs::utility {
+namespace triqs { namespace utility {
 
   std::string stack_trace() {
 
@@ -56,4 +56,4 @@ namespace triqs::utility {
     return r;
   }
 
-} // namespace triqs::utility
+}} // namespace triqs::utility
